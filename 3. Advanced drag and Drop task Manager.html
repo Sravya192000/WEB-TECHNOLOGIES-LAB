@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mini Task Board</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f4f8;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        #taskInputContainer {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        #taskInput {
+            padding: 8px;
+            width: 250px;
+            font-size: 16px;
+        }
+
+        #addTaskBtn {
+            padding: 8px 15px;
+            font-size: 16px;
+            margin-left: 10px;
+            cursor: pointer;
+            background-color: #aa7908c0;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        #addTaskBtn:hover {
+            background-color: #aa7908c0;
+        }
+
+        #board {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .column {
+            background-color: #e7e7e7;
+            width: 30%;
+            padding: 10px;
+            border-radius: 10px;
+            min-height: 300px;
+        }
+
+        .column h2 {
+            text-align: center;
+        }
+
+        .task {
+            background-color: #fff;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: grab;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .completed-task {
+            background-color: #ddbd92 !important;
+        }
+
+        #message {
+            text-align: center;
+            margin-top: 15px;
+            color: rgb(1, 38, 1);
+            font-weight: bold;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Mini Task Board</h1>
+
+<div id="taskInputContainer">
+    <input type="text" id="taskInput" placeholder="Enter task name">
+    <button id="addTaskBtn">Add Task</button>
+</div>
+
+<div id="board">
+    <div class="column" id="todo" ondragover="allowDrop(event)" ondrop="drop(event)">
+        <h2>To Do</h2>
+    </div>
+    <div class="column" id="inProgress" ondragover="allowDrop(event)" ondrop="drop(event)">
+        <h2>In Progress</h2>
+    </div>
+    <div class="column" id="completed" ondragover="allowDrop(event)" ondrop="drop(event)">
+        <h2>Completed</h2>
+    </div>
+</div>
+
+<div id="message">Task Completed Successfully!</div>
+
+<script>
+    const addTaskBtn = document.getElementById('addTaskBtn');
+    const taskInput = document.getElementById('taskInput');
+    const message = document.getElementById('message');
+
+    addTaskBtn.addEventListener('click', () => {
+        const taskName = taskInput.value.trim();
+        if(taskName === '') {
+            alert('Please enter a task name.');
+            return;
+        }
+
+        const taskDiv = document.createElement('div');
+        taskDiv.className = 'task';
+        taskDiv.draggable = true;
+        taskDiv.id = 'task-' + Date.now();
+
+        const currentDate = new Date().toLocaleDateString();
+        taskDiv.innerHTML = `<strong>${taskName}</strong><br><small>${currentDate}</small>`;
+
+        taskDiv.addEventListener('dragstart', drag);
+
+        document.getElementById('todo').appendChild(taskDiv);
+
+        taskInput.value = '';
+    });
+
+    // Drag & Drop functions
+    function allowDrop(event) {
+        event.preventDefault();
+    }
+
+    function drag(event) {
+        event.dataTransfer.setData('text', event.target.id);
+    }
+
+    function drop(event) {
+        event.preventDefault();
+        const taskId = event.dataTransfer.getData('text');
+        const task = document.getElementById(taskId);
+        event.currentTarget.appendChild(task);
+
+        // If dropped in Completed column
+        if(event.currentTarget.id === 'completed') {
+            task.classList.add('completed-task');
+            message.style.display = 'block';
+            setTimeout(() => { message.style.display = 'none'; }, 3000);
+        } else {
+            task.classList.remove('completed-task');
+        }
+    }
+</script>
+
+</body>
+</html>
