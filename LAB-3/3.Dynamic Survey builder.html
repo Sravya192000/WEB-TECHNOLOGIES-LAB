@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dynamic Survey Builder</title>
+
+<style>
+body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: linear-gradient(120deg, #f0f0f0, #e0e0d1); /* Neutral gradient */
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    width: 750px;
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 14px;
+    box-shadow: 0 20px 35px rgba(0,0,0,0.15);
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 25px;
+    color: #333;
+}
+
+.question {
+    margin-bottom: 20px;
+}
+
+.question label {
+    font-weight: 600;
+    color: #444;
+    display: block;
+    margin-bottom: 6px;
+}
+
+input[type="text"] {
+    width: 100%;
+    padding: 9px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+.options {
+    margin-top: 6px;
+}
+
+.options label {
+    display: block;
+    font-weight: normal;
+    margin-bottom: 5px;
+}
+
+.error {
+    font-size: 13px;
+    color: red;
+    margin-top: 4px;
+}
+
+.valid {
+    border: 2px solid green;
+}
+
+.invalid {
+    border: 2px solid red;
+}
+
+button {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    background: #8c8c8c; /* neutral button color */
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+button:hover {
+    background: #6e6e6e; /* slightly darker on hover */
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h2>Dynamic Survey Form</h2>
+
+<form id="surveyForm"></form>
+
+<button onclick="submitSurvey()">Submit Survey</button>
+</div>
+
+<script>
+// 🔹 Question Data Structure
+const questions = [
+    {
+        id: 1,
+        question: "What is your name?",
+        type: "text",
+        required: true,
+        maxLength: 20
+    },
+    {
+        id: 2,
+        question: "Select your gender",
+        type: "radio",
+        required: true,
+        options: ["Male", "Female", "Other"]
+    },
+    {
+        id: 3,
+        question: "Which technologies do you know?",
+        type: "checkbox",
+        required: true,
+        minSelect: 2,
+        options: ["HTML", "CSS", "JavaScript", "Python"]
+    }
+];
+
+const form = document.getElementById("surveyForm");
+
+// 🔹 Generate Form Dynamically
+questions.forEach(q => {
+    const div = document.createElement("div");
+    div.className = "question";
+    div.id = "q" + q.id;
+
+    let html = `<label>${q.question}</label>`;
+
+    if (q.type === "text") {
+        html += `<input type="text" id="input${q.id}">`;
+    }
+
+    if (q.type === "radio") {
+        html += `<div class="options">`;
+        q.options.forEach(opt => {
+            html += `
+                <label>
+                    <input type="radio" name="radio${q.id}" value="${opt}">
+                    ${opt}
+                </label>`;
+        });
+        html += `</div>`;
+    }
+
+    if (q.type === "checkbox") {
+        html += `<div class="options">`;
+        q.options.forEach(opt => {
+            html += `
+                <label>
+                    <input type="checkbox" name="check${q.id}" value="${opt}">
+                    ${opt}
+                </label>`;
+        });
+        html += `</div>`;
+    }
+
+    html += `<div class="error" id="error${q.id}"></div>`;
+    div.innerHTML = html;
+    form.appendChild(div);
+});
+
+// 🔹 Validation Functions
+function validateQuestion(q) {
+    const error = document.getElementById("error" + q.id);
+    error.textContent = "";
+
+    if (q.type === "text") {
+        const input = document.getElementById("input" + q.id);
+        input.classList.remove("invalid", "valid");
+
+        if (q.required && input.value.trim() === "") {
+            input.classList.add("invalid");
+            error.textContent = "This field is required";
+            return false;
+        }
+        if (input.value.length > q.maxLength) {
+            input.classList.add("invalid");
+            error.textContent = `Maximum ${q.maxLength} characters allowed`;
+            return false;
+        }
+        input.classList.add("valid");
+    }
+
+    if (q.type === "radio") {
+        const checked = document.querySelector(`input[name="radio${q.id}"]:checked`);
+        if (q.required && !checked) {
+            error.textContent = "Please select one option";
+            return false;
+        }
+    }
+
+    if (q.type === "checkbox") {
+        const checked = document.querySelectorAll(`input[name="check${q.id}"]:checked`);
+        if (checked.length < q.minSelect) {
+            error.textContent = `Select at least ${q.minSelect} options`;
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// 🔹 Form Submission
+function submitSurvey() {
+    let isValid = true;
+
+    questions.forEach(q => {
+        if (!validateQuestion(q)) {
+            isValid = false;
+        }
+    });
+
+    if (isValid) {
+        alert("Survey Submitted Successfully!");
+        form.reset();
+        document.querySelectorAll(".valid").forEach(el => el.classList.remove("valid"));
+    } else {
+        alert("Please fix the highlighted errors");
+    }
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Adaptive Registration System</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: linear-gradient(120deg, #e0eafc, #cfdef3);
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    width: 700px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+    padding: 25px 30px;
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 25px;
+    color: #333;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px 20px;
+}
+
+.full {
+    grid-column: span 2;
+}
+
+label {
+    font-size: 14px;
+    color: #444;
+}
+
+input, select {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: #5a7cff;
+}
+
+.error {
+    font-size: 12px;
+}
+
+.valid {
+    border: 2px solid green;
+}
+
+.invalid {
+    border: 2px solid red;
+}
+
+#skillsField {
+    display: none;
+}
+
+button {
+    margin-top: 20px;
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    background: #02104a;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #02104a;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<form id="registerForm">
+
+<h2>Adaptive Registration</h2>
+
+<div class="form-grid">
+
+    <div>
+        <label>Name</label>
+        <input type="text" id="name">
+    </div>
+
+    <div>
+        <label>Age</label>
+        <input type="number" id="age">
+    </div>
+
+    <div class="full">
+        <label>Email</label>
+        <input type="email" id="email">
+        <span class="error" id="emailError"></span>
+    </div>
+
+    <div>
+        <label>Password</label>
+        <input type="password" id="password">
+        <span class="error" id="passwordError"></span>
+    </div>
+
+    <div>
+        <label>Confirm Password</label>
+        <input type="password" id="confirmPassword">
+        <span class="error" id="confirmError"></span>
+    </div>
+
+    <div class="full">
+        <label>Role</label>
+        <select id="role">
+            <option value="">Select Role</option>
+            <option value="student">Student</option>
+            <option value="teacher">Teacher</option>
+            <option value="admin">Admin</option>
+        </select>
+    </div>
+
+    <div class="full" id="skillsField">
+        <label>Skills</label>
+        <input type="text" id="skills" placeholder="Java, Python, SQL">
+    </div>
+
+    <div class="full">
+        <button type="submit">Register</button>
+    </div>
+
+</div>
+</form>
+</div>
+
+<script>
+const form = document.getElementById("registerForm");
+const role = document.getElementById("role");
+const skillsField = document.getElementById("skillsField");
+
+document.getElementById("email").addEventListener("keyup", validateEmail);
+document.getElementById("password").addEventListener("keyup", () => {
+    validatePassword();
+    validateConfirmPassword();
+});
+document.getElementById("confirmPassword").addEventListener("keyup", validateConfirmPassword);
+
+role.addEventListener("change", () => {
+    skillsField.style.display = role.value === "student" ? "none" : "block";
+    validateEmail();
+    validatePassword();
+});
+
+function showError(input, message, errorId) {
+    input.classList.add("invalid");
+    input.classList.remove("valid");
+    const err = document.getElementById(errorId);
+    err.textContent = message;
+    err.style.color = "red";
+}
+
+function showSuccess(input, errorId, message = "") {
+    input.classList.add("valid");
+    input.classList.remove("invalid");
+    const err = document.getElementById(errorId);
+    err.textContent = message;
+    err.style.color = "green";
+}
+
+function validateEmail() {
+    const email = document.getElementById("email");
+    const value = email.value.trim();
+
+    if (value === "") {
+        document.getElementById("emailError").textContent = "";
+        return false;
+    }
+
+    if (role.value === "teacher" && !value.endsWith(".edu")) {
+        showError(email, "Teacher email must end with .edu", "emailError");
+        return false;
+    }
+
+    if (role.value === "admin" && !value.endsWith("@admin.com")) {
+        showError(email, "Admin email must end with @admin.com", "emailError");
+        return false;
+    }
+
+    showSuccess(email, "emailError", "Valid email");
+    return true;
+}
+
+function validatePassword() {
+    const password = document.getElementById("password");
+    const value = password.value;
+
+    if (role.value === "admin") {
+        if (!/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{10,}$/.test(value)) {
+            showError(password, "Admin password: strong required", "passwordError");
+            return false;
+        }
+    }
+    else if (role.value === "teacher") {
+        if (!/^(?=.*\d).{8,}$/.test(value)) {
+            showError(password, "Min 8 chars & number", "passwordError");
+            return false;
+        }
+    }
+    else {
+        if (value.length < 6) {
+            showError(password, "Min 6 characters", "passwordError");
+            return false;
+        }
+    }
+
+    showSuccess(password, "passwordError", "Strong password");
+    return true;
+}
+
+function validateConfirmPassword() {
+    const password = document.getElementById("password").value;
+    const confirm = document.getElementById("confirmPassword");
+
+    if (confirm.value === "") {
+        document.getElementById("confirmError").textContent = "";
+        return false;
+    }
+
+    if (confirm.value !== password) {
+        showError(confirm, "Passwords do not match", "confirmError");
+        return false;
+    }
+
+    showSuccess(confirm, "confirmError", "Passwords match");
+    return true;
+}
+
+form.addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    if (validateEmail() && validatePassword() && validateConfirmPassword()) {
+        alert("Registration Successful!");
+        form.reset();
+        skillsField.style.display = "none";
+        document.querySelectorAll(".valid").forEach(el => el.classList.remove("valid"));
+        document.querySelectorAll(".error").forEach(el => el.textContent = "");
+    } else {
+        alert("Please correct the highlighted errors");
+    }
+});
+</script>
+
+</body>
+</html>

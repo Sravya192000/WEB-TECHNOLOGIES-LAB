@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Real-Time User Activity Monitor</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    background: #f0f0f0;
+}
+
+h2 {
+    text-align: center;
+}
+
+#activityLog {
+    max-height: 300px;
+    overflow-y: auto;
+    background: #fff;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+button {
+    padding: 10px 20px;
+    margin-right: 10px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+#resetBtn { background: #ff4d4d; color: white; }
+#exportBtn { background: #4caf50; color: white; }
+
+.warning {
+    color: red;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+</style>
+</head>
+<body>
+
+<h2>Real-Time User Activity Monitor</h2>
+
+<div id="activityLog"></div>
+<div class="warning" id="warningMsg"></div>
+
+<button id="resetBtn">Reset Log</button>
+<button id="exportBtn">Export Log</button>
+
+<script>
+// 🔹 Activity log array
+let activityLog = [];
+let clickCount = 0;
+const CLICK_THRESHOLD = 10;
+
+const logDiv = document.getElementById("activityLog");
+const warningDiv = document.getElementById("warningMsg");
+
+// 🔹 Function to log activity
+function logActivity(type, target) {
+    const timestamp = new Date().toLocaleTimeString();
+    const activity = { type, target: target.tagName, timestamp };
+    activityLog.push(activity);
+    renderLog();
+
+    if (type === "click") {
+        clickCount++;
+        if (clickCount > CLICK_THRESHOLD) {
+            warningDiv.textContent = "⚠ Warning: Too many clicks!";
+        }
+    }
+}
+
+// 🔹 Render activity log in DOM
+function renderLog() {
+    logDiv.innerHTML = activityLog
+        .map(a => `${a.timestamp} → ${a.type} on ${a.target}`)
+        .join("<br>");
+}
+
+// 🔹 Event listeners
+document.addEventListener("click", e => logActivity("click", e.target), true); // capturing
+document.addEventListener("keydown", e => logActivity("key press", e.target), false); // bubbling
+document.addEventListener("focusin", e => logActivity("focus", e.target), false); // bubbling
+
+// 🔹 Reset log
+document.getElementById("resetBtn").addEventListener("click", () => {
+    activityLog = [];
+    clickCount = 0;
+    logDiv.innerHTML = "";
+    warningDiv.textContent = "";
+});
+
+// 🔹 Export log as text file
+document.getElementById("exportBtn").addEventListener("click", () => {
+    if (activityLog.length === 0) {
+        alert("No activity to export.");
+        return;
+    }
+    const logText = activityLog.map(a => `${a.timestamp} → ${a.type} on ${a.target}`).join("\n");
+    const blob = new Blob([logText], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "activity_log.txt";
+    a.click();
+    URL.revokeObjectURL(url);
+});
+</script>
+
+</body>
+</html>
