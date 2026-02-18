@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Username Checker</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            max-width: 500px; margin: 50px auto; padding: 30px;
+            background: linear-gradient(135deg, #f2f8fa 0%, #565858 100%);
+            min-height: 100vh; display: flex; align-items: center;
+        }
+        .container { 
+            background: rgba(255,255,255,0.95); 
+            border-radius: 20px; 
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1); 
+            padding: 40px; 
+            width: 100%;
+        }
+        h1 { text-align: center; color: #2c5282; margin-bottom: 30px; }
+        .form-group { margin-bottom: 25px; position: relative; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #4a5568; }
+        input[type="text"], input[type="email"], input[type="password"] { 
+            width: 100%; padding: 15px 20px; 
+            border: 2px solid #e2e8f0; 
+            border-radius: 12px; 
+            font-size: 16px; 
+            transition: all 0.3s; 
+            box-sizing: border-box;
+        }
+        input:focus { 
+            outline: none; 
+            border-color: #4c51bf; 
+            box-shadow: 0 0 0 3px rgba(76,81,191,0.1); 
+        }
+        button { 
+            width: 100%; padding: 15px; 
+            background: linear-gradient(45deg, #48bb78, #38a169); 
+            color: white; border: none; 
+            border-radius: 12px; 
+            font-size: 16px; font-weight: 600; 
+            cursor: pointer; 
+            transition: all 0.3s; 
+        }
+        button:hover:not(:disabled) { 
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(72,187,120,0.3); 
+        }
+        button:disabled { 
+            background: #a0aec0; cursor: not-allowed; opacity: 0.6; 
+        }
+        
+        /* Username Feedback */
+        .username-feedback { 
+            margin-top: 8px; padding: 12px 15px; 
+            border-radius: 8px; font-weight: 500; 
+            display: none; min-height: 20px;
+            transition: all 0.3s ease;
+        }
+        .available { 
+            background: #c6f6d5; color: #22543d; 
+            border: 1px solid #9ae6b4; 
+        }
+        .taken { 
+            background: #fed7d7; color: #742a2a; 
+            border: 1px solid #fc8181; 
+        }
+        .loading { 
+            background: #bee3f8; color: #2c5282; 
+            border: 1px solid #90cdf4; 
+            display: flex; align-items: center; gap: 8px;
+        }
+        .loading::after {
+            content: '';
+            width: 16px; height: 16px;
+            border: 2px solid #4c51bf;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error { 
+            background: #fed7d7; color: #742a2a; 
+            border: 1px solid #fc8181; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Registration Form</h1>
+        
+        <form id="registrationForm">
+            <div class="form-group">
+                <label for="username">Username *</label>
+                <input type="text" id="username" name="username" required 
+                       minlength="3" maxlength="20" placeholder="Enter unique username">
+                <div id="usernameFeedback" class="username-feedback"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email *</label>
+                <input type="email" id="email" name="email" required 
+                       placeholder="your@email.com">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password *</label>
+                <input type="password" id="password" name="password" required 
+                       minlength="6" placeholder="At least 6 characters">
+            </div>
+
+            <button type="submit" id="submitBtn" disabled>Create Account</button>
+        </form>
+
+        <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.7); border-radius: 10px; font-size: 14px;">
+            <strong>Existing Users:</strong> john_doe, jane_smith, admin123, user2023
+        </div>
+    </div>
+
+    <script>
+        // Simulated users JSON data (LocalStorage)
+        function getUsersData() {
+            const stored = localStorage.getItem('registeredUsers');
+            if (!stored) {
+                const defaultUsers = {
+                    users: [
+                        { username: "john_doe", email: "john@example.com" },
+                        { username: "jane_smith", email: "jane@example.com" },
+                        { username: "admin123", email: "admin@example.com" },
+                        { username: "user2023", email: "user@example.com" }
+                    ]
+                };
+                localStorage.setItem('registeredUsers', JSON.stringify(defaultUsers));
+                return defaultUsers;
+            }
+            return JSON.parse(stored);
+        }
+
+        // Show feedback
+        function showUsernameFeedback(message, type) {
+            const feedback = document.getElementById('usernameFeedback');
+            feedback.textContent = message;
+            feedback.className = `username-feedback ${type}`;
+            feedback.style.display = 'block';
+        }
+
+        // Show loading
+        function showLoading() {
+            showUsernameFeedback('Checking availability...', 'loading');
+        }
+
+        // Update submit button state
+        function updateSubmitButton() {
+            const username = document.getElementById('username').value.trim();
+            const submitBtn = document.getElementById('submitBtn');
+            const feedback = document.getElementById('usernameFeedback');
+            
+            // Enable submit only if username is valid AND available
+            const isUsernameAvailable = feedback.classList.contains('available');
+            submitBtn.disabled = !username || !isUsernameAvailable;
+        }
+
+        // AJAX Username Check (Fetch API)
+        async function checkUsernameAvailability(username) {
+            // Show loading
+            showLoading();
+            updateSubmitButton();
+
+            try {
+                // Simulate AJAX call to JSON "server"
+                await new Promise(resolve => setTimeout(resolve, 800)); // Simulate network delay
+                
+                const usersData = getUsersData();
+                const userExists = usersData.users.some(user => user.username.toLowerCase() === username.toLowerCase());
+                
+                if (userExists) {
+                    showUsernameFeedback('Username already taken', 'taken');
+                } else {
+                    showUsernameFeedback(' Username available', 'available');
+                }
+                
+            } catch (error) {
+                showUsernameFeedback('Error checking username', 'error');
+                console.error('Username check failed:', error);
+            }
+            
+            updateSubmitButton();
+        }
+
+        // Real-time username checking
+        document.getElementById('username').addEventListener('input', function(e) {
+            const username = e.target.value.trim();
+            
+            // Clear previous feedback if empty
+            if (!username) {
+                document.getElementById('usernameFeedback').style.display = 'none';
+                updateSubmitButton();
+                return;
+            }
+            
+            // Debounce - only check after user stops typing for 500ms
+            clearTimeout(window.usernameCheckTimeout);
+            window.usernameCheckTimeout = setTimeout(() => {
+                if (username.length >= 3) {
+                    checkUsernameAvailability(username);
+                }
+            }, 500);
+        });
+
+        // Form submission handler
+        document.getElementById('registrationForm').addEventListener('submit', function(e) {
+            e.preventDefault(); // Prevent form submission
+            
+            const feedback = document.getElementById('usernameFeedback');
+            if (!feedback.classList.contains('available')) {
+                showUsernameFeedback('Please choose an available username first', 'error');
+                return false;
+            }
+
+            // Simulate successful registration
+            const newUser = {
+                username: document.getElementById('username').value.trim(),
+                email: document.getElementById('email').value.trim()
+            };
+            
+            // Add to "database"
+            const usersData = getUsersData();
+            usersData.users.push(newUser);
+            localStorage.setItem('registeredUsers', JSON.stringify(usersData));
+            
+            alert(`🎉 Account created successfully!\nUsername: ${newUser.username}`);
+            this.reset();
+            document.getElementById('usernameFeedback').style.display = 'none';
+            document.getElementById('submitBtn').disabled = true;
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Username Checker Ready!');
+            console.log('Existing users:', getUsersData().users.map(u => u.username));
+        });
+    </script>
+</body>
+</html>
