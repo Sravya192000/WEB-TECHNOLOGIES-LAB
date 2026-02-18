@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Book Tracker - FIXED</title>
+    <style>
+        /* Same styles as before - keeping it clean */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        .container { background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); padding: 30px; }
+        h1 { text-align: center; color: #333; margin-bottom: 30px; }
+        .form-section { background: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #28a745; }
+        .form-row { display: flex; gap: 15px; flex-wrap: wrap; align-items: end; }
+        input, select, button { padding: 12px 15px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 14px; transition: all 0.3s; }
+        input:focus, select:focus { outline: none; border-color: #28a745; box-shadow: 0 0 0 3px rgba(40,167,69,0.1); }
+        button { background: linear-gradient(45deg, #28a745, #1e7e34); color: white; border: none; cursor: pointer; font-weight: 600; }
+        button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(40,167,69,0.4); }
+        .btn-warning { background: linear-gradient(45deg, #ffc107, #e0a800); color: #212529; }
+        .btn-danger { background: linear-gradient(45deg, #dc3545, #c82333); }
+        .btn-toggle { background: linear-gradient(45deg, #17a2b8, #117a8b); padding: 8px 12px; font-size: 12px; margin-right: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        th { background: linear-gradient(45deg, #28a745, #1e7e34); color: white; padding: 15px; text-align: left; font-weight: 600; }
+        td { padding: 15px; border-bottom: 1px solid #eee; }
+        tr:hover { background: #f8f9ff; }
+        .status-available { color: #28a745; font-weight: bold; }
+        .status-unavailable { color: #dc3545; font-weight: bold; }
+        .message { padding: 15px 20px; margin: 20px 0; border-radius: 8px; font-weight: 500; display: none; animation: slideIn 0.3s ease; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Library Book Tracker</h1>
+        <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 14px;">
+            💾 Uses LocalStorage for persistence - No server needed!
+        </div>
+        
+        <div id="message" class="message"></div>
+
+        <!-- Add Book Form -->
+        <div class="form-section">
+            <h3>➕ Add New Book</h3>
+            <div class="form-row">
+                <input type="text" id="bookTitle" placeholder="Book Title" maxlength="100">
+                <input type="text" id="bookAuthor" placeholder="Author" maxlength="80">
+                <select id="bookStatus">
+                    <option value="true">Available</option>
+                    <option value="false">Unavailable</option>
+                </select>
+                <button onclick="addBook()">➕ Add Book</button>
+                <button onclick="clearForm()" style="background: #6c757d;">Clear</button>
+            </div>
+        </div>
+
+        <!-- Books Table -->
+        <table id="booksTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Author</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="bookList"></tbody>
+        </table>
+        
+        <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border-radius: 8px; font-size: 12px;">
+            🔄 All operations persist across browser sessions via LocalStorage
+        </div>
+    </div>
+
+    <script>
+        // LocalStorage XML Storage Helper
+        function getStoredXML() {
+            const stored = localStorage.getItem('libraryXML');
+            if (!stored) {
+                // Default XML if none exists
+                const defaultXML = `<?xml version="1.0" encoding="UTF-8"?>
+<library>
+    <book id="1"><title>The Great Gatsby</title><author>F. Scott Fitzgerald</author><available>true</available></book>
+    <book id="2"><title>To Kill a Mockingbird</title><author>Harper Lee</author><available>false</available></book>
+    <book id="3"><title>1984</title><author>George Orwell</author><available>true</available></book>
+</library>`;
+                localStorage.setItem('libraryXML', defaultXML);
+                return defaultXML;
+            }
+            return stored;
+        }
+
+        function saveXML(xmlString) {
+            localStorage.setItem('libraryXML', xmlString);
+        }
+
+        function parseXML(xmlString) {
+            const parser = new DOMParser();
+            return parser.parseFromString(xmlString, 'text/xml');
+        }
+
+        // UI Helpers
+        function showMessage(text, type = 'success') {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = `message ${type}`;
+            msg.style.display = 'block';
+            setTimeout(() => msg.style.display = 'none', 3000);
+        }
+
+        function clearForm() {
+            document.getElementById('bookTitle').value = '';
+            document.getElementById('bookAuthor').value = '';
+            document.getElementById('bookStatus').value = 'true';
+        }
+
+        // Load and display books (READ)
+        function loadBooks() {
+            try {
+                const xmlString = getStoredXML();
+                const xmlDoc = parseXML(xmlString);
+                
+                const tbody = document.getElementById('bookList');
+                tbody.innerHTML = '';
+
+                const books = xmlDoc.getElementsByTagName('book');
+                if (books.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:#666;">No books in library</td></tr>';
+                    return;
+                }
+
+                Array.from(books).forEach(book => {
+                    const id = book.getAttribute('id');
+                    const title = book.getElementsByTagName('title')[0]?.textContent || 'N/A';
+                    const author = book.getElementsByTagName('author')[0]?.textContent || 'N/A';
+                    const available = book.getElementsByTagName('available')[0]?.textContent === 'true';
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><strong>#${id}</strong></td>
+                        <td>${title}</td>
+                        <td>${author}</td>
+                        <td class="status-${available ? 'available' : 'unavailable'}">
+                            ${available ? '✅ Available' : '❌ Unavailable'}
+                        </td>
+                        <td>
+                            <button onclick="toggleAvailability(${id})" class="btn-toggle">
+                                ${available ? 'Mark Unavailable' : 'Mark Available'}
+                            </button>
+                            <button onclick="deleteBook(${id})" class="btn-danger">🗑️ Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (e) {
+                showMessage('Error parsing XML data', 'error');
+            }
+        }
+
+        // Validation
+        function validateBookData(title, author) {
+            if (!title?.trim() || title.trim().length < 2) return 'Title must be at least 2 characters';
+            if (!author?.trim() || author.trim().length < 2) return 'Author must be at least 2 characters';
+            return null;
+        }
+
+        // Add new book (CREATE) ✅ FIXED - Works Now!
+        function addBook() {
+            const title = document.getElementById('bookTitle').value.trim();
+            const author = document.getElementById('bookAuthor').value.trim();
+            const status = document.getElementById('bookStatus').value;
+
+            const error = validateBookData(title, author);
+            if (error) {
+                showMessage(error, 'error');
+                return;
+            }
+
+            try {
+                const xmlString = getStoredXML();
+                const xmlDoc = parseXML(xmlString);
+                const library = xmlDoc.getElementsByTagName('library')[0];
+                
+                // Generate new ID
+                const books = xmlDoc.getElementsByTagName('book');
+                const newId = (books.length + 1).toString();
+
+                // XML DOM: Create new book node
+                const newBook = xmlDoc.createElement('book');
+                newBook.setAttribute('id', newId);
+
+                const titleNode = xmlDoc.createElement('title');
+                titleNode.textContent = title;
+                const authorNode = xmlDoc.createElement('author');
+                authorNode.textContent = author;
+                const statusNode = xmlDoc.createElement('available');
+                statusNode.textContent = status;
+
+                newBook.appendChild(titleNode);
+                newBook.appendChild(authorNode);
+                newBook.appendChild(statusNode);
+                library.appendChild(newBook);
+
+                // Save updated XML
+                const serializer = new XMLSerializer();
+                saveXML(serializer.serializeToString(xmlDoc));
+
+                showMessage(`✅ "${title}" added successfully! (ID: ${newId})`, 'success');
+                clearForm();
+                loadBooks(); // Refresh table
+            } catch (e) {
+                showMessage('Error adding book', 'error');
+                console.error(e);
+            }
+        }
+
+        // Toggle availability (UPDATE) ✅ Works
+        function toggleAvailability(id) {
+            try {
+                const xmlString = getStoredXML();
+                const xmlDoc = parseXML(xmlString);
+                const books = xmlDoc.getElementsByTagName('book');
+                
+                for (let book of books) {
+                    if (book.getAttribute('id') == id) {
+                        const statusNode = book.getElementsByTagName('available')[0];
+                        statusNode.textContent = statusNode.textContent === 'true' ? 'false' : 'true';
+                        
+                        const serializer = new XMLSerializer();
+                        saveXML(serializer.serializeToString(xmlDoc));
+                        
+                        showMessage(`✅ Book ${id} status updated!`, 'success');
+                        loadBooks();
+                        return;
+                    }
+                }
+            } catch (e) {
+                showMessage('Error updating status', 'error');
+            }
+        }
+
+        // Delete book (DELETE) ✅ Works
+        function deleteBook(id) {
+            if (!confirm(`Delete book ID ${id}?`)) return;
+
+            try {
+                const xmlString = getStoredXML();
+                const xmlDoc = parseXML(xmlString);
+                const books = xmlDoc.getElementsByTagName('book');
+                
+                for (let i = 0; i < books.length; i++) {
+                    if (books[i].getAttribute('id') == id) {
+                        books[i].parentNode.removeChild(books[i]);
+                        
+                        const serializer = new XMLSerializer();
+                        saveXML(serializer.serializeToString(xmlDoc));
+                        
+                        showMessage(`✅ Book ${id} deleted!`, 'success');
+                        loadBooks();
+                        return;
+                    }
+                }
+            } catch (e) {
+                showMessage('Error deleting book', 'error');
+            }
+        }
+
+        // Initialize
+        window.onload = loadBooks;
+        window.onstorage = loadBooks; // Refresh if LocalStorage changes
+    </script>
+</body>
+</html>
