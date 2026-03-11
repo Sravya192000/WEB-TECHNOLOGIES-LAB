@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Management System</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        input { margin: 5px; padding: 5px; }
+        button { padding: 5px 10px; margin: 5px; }
+        table { border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid black; padding: 8px; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+
+<h2>Student Management System (AJAX CRUD)</h2>
+
+<form id="studentForm">
+    <input type="text" id="id" placeholder="Student ID">
+    <input type="text" id="name" placeholder="Name">
+    <input type="text" id="department" placeholder="Department">
+    <input type="number" id="marks" placeholder="Marks">
+    <button type="button" onclick="addStudent()">Add Student</button>
+</form>
+
+<div id="message"></div>
+
+<button onclick="fetchStudents()">Load Students</button>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Department</th>
+            <th>Marks</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="studentTable"></tbody>
+</table>
+
+<script src="script.js"></script>
+</body>
+</html>

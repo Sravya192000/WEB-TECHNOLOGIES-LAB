@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AJAX Product Search with Images</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            max-width: 900px; margin: 0 auto; padding: 30px;
+            background: linear-gradient(135deg, #AEC6CF 0%, #B3EBF2 100%);
+            min-height: 100vh;
+        }
+        .container { 
+            background: rgba(255,255,255,0.95); 
+            border-radius: 20px; 
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1); 
+            padding: 40px; 
+        }
+        h1 { text-align: center; color: #2c5282; margin-bottom: 30px; }
+        
+        /* Search Box */
+        .search-container { position: relative; margin-bottom: 30px; }
+        .search-input { 
+            width: 100%; padding: 20px 25px 20px 60px; 
+            border: 3px solid #e2e8f0; border-radius: 50px; 
+            font-size: 18px; transition: all 0.3s; 
+            box-sizing: border-box;
+            background: #fff url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="%23666" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>') no-repeat 20px center;
+        }
+        .search-input:focus { outline: none; border-color: #4c51bf; box-shadow: 0 0 0 4px rgba(76,81,191,0.1); }
+        
+        /* Loading */
+        .loading { 
+            position: absolute; right: 20px; top: 50%; transform: translateY(-50%); 
+            width: 24px; height: 24px; border: 3px solid #e2e8f0; border-top: 3px solid #4c51bf; 
+            border-radius: 50%; display: none; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: translateY(-50%) rotate(0deg); } 100% { transform: translateY(-50%) rotate(360deg); } }
+        
+        /* Results */
+        .results-container { min-height: 100px; position: relative; }
+        .results { background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-height: 600px; overflow-y: auto; }
+        .no-results { padding: 40px 30px; text-align: center; color: #666; font-size: 18px; }
+        
+        .result-item { 
+            padding: 25px 30px; border-bottom: 1px solid #e2e8f0; 
+            display: flex; align-items: center; gap: 20px; transition: all 0.3s;
+        }
+        .result-item:hover { background: #f7fafc; transform: translateX(5px); }
+        .result-item:last-child { border-bottom: none; }
+        
+        /* REAL PRODUCT IMAGES */
+        .product-image { 
+            width: 90px; height: 90px; border-radius: 15px; 
+            object-fit: cover; border: 3px solid #e2e8f0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        .product-image:hover { transform: scale(1.05); border-color: #4c51bf; }
+        
+        .product-info h3 { margin: 0 0 8px 0; color: #2d3748; font-size: 20px; }
+        .product-meta { display: flex; gap: 20px; color: #718096; font-size: 14px; }
+        .price { font-weight: bold; color: #48bb78; font-size: 18px; }
+        .category-badge { 
+            background: linear-gradient(45deg, #4c51bf, #5a67d8); 
+            color: white; padding: 4px 12px; border-radius: 20px; 
+            font-size: 12px; font-weight: 600;
+        }
+        
+        .message { padding: 20px 30px; margin: 20px 0; border-radius: 12px; font-weight: 500; display: none; }
+        .error { background: #fed7d7; color: #742a2a; border: 1px solid #fc8181; }
+        .stats { background: rgba(255,255,255,0.8); padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 AJAX Product Search with Images</h1>
+        
+        <div class="stats">
+            <strong>Try:</strong> laptop, phone, book, shirt, shoes, nike, macbook
+        </div>
+
+        <div class="search-container">
+            <input type="text" class="search-input" id="searchInput" 
+                   placeholder="Search products... (minimum 2 characters)">
+            <div class="loading" id="loadingIndicator"></div>
+        </div>
+
+        <div class="results-container">
+            <div id="results" class="results"></div>
+        </div>
+
+        <div id="errorMessage" class="message error"></div>
+    </div>
+
+    <script>
+        // ✅ Product database WITH REAL IMAGES
+        const productDatabase = [
+            { id: 1, name: "MacBook Pro", category: "Electronics", price: 1299.99, image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=100&h=100&fit=crop&crop=center" },
+            { id: 2, name: "iPhone 15 Pro", category: "Electronics", price: 999.99, image: "https://images.unsplash.com/photo-1690488238791-64d6f6034d0e?w=100&h=100&fit=crop&crop=center" },
+            { id: 3, name: "Samsung Galaxy S24", category: "Electronics", price: 899.99, image: "https://images.unsplash.com/photo-1588196745251-289ea12d6021?w=100&h=100&fit=crop&crop=center" },
+            { id: 4, name: "Cotton T-Shirt", category: "Clothing", price: 19.99, image: "https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=100&h=100&fit=crop&crop=center" },
+            { id: 5, name: "Leather Jacket", category: "Clothing", price: 149.99, image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=100&h=100&fit=crop&crop=center" },
+            { id: 6, name: "Nike Air Max", category: "Shoes", price: 129.99, image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=100&fit=crop&crop=center" },
+            { id: 7, name: "Python Programming", category: "Books", price: 39.99, image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=100&h=100&fit=crop&crop=center" },
+            { id: 8, name: "JavaScript Guide", category: "Books", price: 29.99, image: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=100&h=100&fit=crop&crop=center" },
+            { id: 9, name: "Gaming Laptop", category: "Electronics", price: 1599.99, image: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=100&h=100&fit=crop&crop=center" },
+            { id: 10, name: "Running Shoes", category: "Shoes", price: 89.99, image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=100&fit=crop&crop=center" },
+            { id: 11, name: "Denim Jeans", category: "Clothing", price: 59.99, image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=100&h=100&fit=crop&crop=center" },
+            { id: 12, name: "Coffee Maker", category: "Home", price: 79.99, image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=100&h=100&fit=crop&crop=center" }
+        ];
+
+        let debounceTimeout;
+
+        // Show/hide elements
+        function toggleLoading(show) {
+            document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
+            document.getElementById('results').style.opacity = show ? '0.5' : '1';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => errorDiv.style.display = 'none', 5000);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        // Simulate AJAX request
+        async function searchProducts(query) {
+            await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 500));
+            
+            const results = productDatabase.filter(product => 
+                product.name.toLowerCase().includes(query.toLowerCase()) ||
+                product.category.toLowerCase().includes(query.toLowerCase())
+            );
+            
+            return {
+                success: true,
+                results: results.slice(0, 8),
+                total: results.length
+            };
+        }
+
+        // Display search results WITH IMAGES
+        function displayResults(data) {
+            const resultsContainer = document.getElementById('results');
+            
+            if (!data.success) {
+                resultsContainer.innerHTML = '<div class="no-results">❌ Search failed. Please try again.</div>';
+                return;
+            }
+
+            if (data.results.length === 0) {
+                resultsContainer.innerHTML = '<div class="no-results">📭 No results found</div>';
+                return;
+            }
+
+            resultsContainer.innerHTML = data.results.map(product => `
+                <div class="result-item">
+                    <img src="${product.image}" alt="${product.name}" class="product-image" 
+                         onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22 viewBox=%220 0 24 24%22 fill=%22%23ccc%22><rect width=%2224%22 height=%2224%22 rx=%2212%22/><text x=%2212%22 y=%2214%22 font-size=%2212%22 text-anchor=%22middle%22 fill=%22%23666%22>📦</text></svg>'">
+                    <div class="product-info">
+                        <h3>${product.name}</h3>
+                        <div class="product-meta">
+                            <span class="category-badge">${product.category}</span>
+                            <span class="price">$${product.price.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Main search function
+        async function performSearch(query) {
+            if (query.length < 2) {
+                clearResults();
+                return;
+            }
+
+            toggleLoading(true);
+
+            try {
+                const response = await searchProducts(query);
+                displayResults(response);
+            } catch (error) {
+                console.error('Search error:', error);
+                showError('Failed to fetch results. Please try again.');
+                displayResults({ success: false });
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        // Event listeners
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const query = e.target.value.trim();
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => {
+                performSearch(query);
+            }, 400);
+        });
+
+        document.getElementById('searchInput').addEventListener('blur', function() {
+            if (!this.value.trim()) {
+                clearResults();
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('✅ Product Search with Images Ready!');
+            console.log(`📦 ${productDatabase.length} products loaded`);
+        });
+    </script>
+</body>
+</html>

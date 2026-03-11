@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Record System</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            max-width: 1100px; margin: 0 auto; padding: 20px;
+            background: linear-gradient(135deg, #c5dae2 0%, #748081 100%);
+            min-height: 100vh;
+        }
+        .container { 
+            background: rgba(255,255,255,0.95); 
+            border-radius: 20px; 
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1); 
+            padding: 30px; 
+        }
+        h1 { text-align: center; color: #2c5282; margin-bottom: 30px; }
+        .form-section { 
+            background: linear-gradient(135deg, #AEC6CF, #B3EBF2); 
+            padding: 25px; 
+            border-radius: 15px; 
+            margin-bottom: 25px; 
+        }
+        .form-row { display: flex; gap: 15px; flex-wrap: wrap; align-items: end; }
+        input, select, button { 
+            padding: 12px 18px; 
+            border: 2px solid #e2e8f0; 
+            border-radius: 10px; 
+            font-size: 15px; 
+            transition: all 0.3s; 
+        }
+        input:focus, select:focus { 
+            outline: none; 
+            border-color: #4c51bf; 
+            box-shadow: 0 0 0 3px rgba(76,81,191,0.1); 
+        }
+        button { 
+            background: linear-gradient(45deg, #48bb78, #38a169); 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            font-weight: 600; 
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(72,187,120,0.3); }
+        .btn-edit { background: linear-gradient(45deg, #ed8936, #dd6b20); color: white; }
+        .btn-danger { background: linear-gradient(45deg, #e53e3e, #960808); }
+        .btn-cancel { background: #a0aec0; }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            background: white; 
+            border-radius: 15px; 
+            overflow: hidden; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+        }
+        th { 
+            background: linear-gradient(45deg, #4c51bf, #5a67d8); 
+            color: white; 
+            padding: 18px; 
+            text-align: left; 
+            font-weight: 600; 
+        }
+        td { padding: 18px; border-bottom: 1px solid #e2e8f0; }
+        tr:hover { background: #ebf8ff; }
+        .marks-good { background: #c6f6d5; color: #22543d; font-weight: bold; }
+        .marks-average { background: #fed7aa; color: #744210; font-weight: bold; }
+        .marks-poor { background: #fed7d7; color: #742a2a; font-weight: bold; }
+        .message { 
+            padding: 15px 25px; 
+            margin: 20px 0; 
+            border-radius: 12px; 
+            font-weight: 500; 
+            display: none; 
+            animation: slideIn 0.4s ease; 
+        }
+        .success { background: #c6f6d5; color: #22543d; border: 1px solid #9ae6b4; }
+        .error { background: #fed7d7; color: #742a2a; border: 1px solid #fc8181; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-15px); } to { opacity: 1; transform: translateY(0); } }
+        .editing { border-color: #ed8936 !important; box-shadow: 0 0 0 3px rgba(237,137,54,0.2) !important; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Student Record System</h1>
+
+        <div id="message" class="message"></div>
+
+        <!-- Student Form -->
+        <div class="form-section">
+            <h3 id="formTitle">Add New Student</h3>
+            <div class="form-row">
+                <input type="hidden" id="editId" value="">
+                <input type="text" id="studentName" placeholder="Student Name *" maxlength="50">
+                <input type="text" id="studentCourse" placeholder="Course *" maxlength="30">
+                <input type="number" id="studentMarks" placeholder="Marks (0-100)" min="0" max="100">
+                <button onclick="saveStudent()" id="saveBtn">➕ Add Student</button>
+                <button onclick="cancelEdit()" class="btn-cancel">❌ Cancel</button>
+            </div>
+        </div>
+
+        <!-- Students Table -->
+        <table id="studentsTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Course</th>
+                    <th>Marks</th>
+                    <th>Grade</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="studentList"></tbody>
+        </table>
+    </div>
+
+    <script>
+        // LocalStorage JSON Helpers
+        function getStoredData() {
+            const stored = localStorage.getItem('studentsData');
+            if (!stored) {
+                const defaultData = {
+                    students: [
+                        { id: 1, name: "Alice Johnson", course: "Computer Science", marks: 85 },
+                        { id: 2, name: "Bob Wilson", course: "Mathematics", marks: 92 },
+                        { id: 3, name: "Carol Davis", course: "Physics", marks: 78 }
+                    ]
+                };
+                localStorage.setItem('studentsData', JSON.stringify(defaultData));
+                return defaultData;
+            }
+            return JSON.parse(stored);
+        }
+
+        function saveData(data) {
+            localStorage.setItem('studentsData', JSON.stringify(data));
+        }
+
+        // UI Helpers
+        function showMessage(text, type = 'success') {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = `message ${type}`;
+            msg.style.display = 'block';
+            setTimeout(() => msg.style.display = 'none', 3500);
+        }
+
+        function clearForm() {
+            document.getElementById('editId').value = '';
+            document.getElementById('studentName').value = '';
+            document.getElementById('studentCourse').value = '';
+            document.getElementById('studentMarks').value = '';
+            document.getElementById('formTitle').textContent = '➕ Add New Student';
+            document.getElementById('saveBtn').textContent = '➕ Add Student';
+            document.querySelectorAll('input').forEach(input => input.classList.remove('editing'));
+        }
+
+        function cancelEdit() {
+            clearForm();
+        }
+
+        // Validation
+        function validateStudent(name, course, marks) {
+            if (!name?.trim() || name.trim().length < 2) return 'Name must be at least 2 characters';
+            if (!course?.trim() || course.trim().length < 2) return 'Course must be at least 2 characters';
+            if (!marks || marks < 0 || marks > 100) return 'Marks must be between 0-100';
+            return null;
+        }
+
+        // READ - Load & Display Students (Fetch API simulation)
+        async function loadStudents() {
+            try {
+                // Simulate Fetch API with LocalStorage
+                const response = new Response(JSON.stringify(getStoredData()));
+                const data = await response.json();
+                
+                displayStudents(data.students);
+            } catch (error) {
+                showMessage('JSON parsing error: ' + error.message, 'error');
+                console.error('JSON Error:', error);
+            }
+        }
+
+        // Display students in table
+        function displayStudents(students) {
+            const tbody = document.getElementById('studentList');
+            tbody.innerHTML = '';
+
+            if (!students || students.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:#666;">No students found</td></tr>';
+                return;
+            }
+
+            students.forEach(student => {
+                const gradeClass = student.marks >= 80 ? 'marks-good' : 
+                                 student.marks >= 60 ? 'marks-average' : 'marks-poor';
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>#${student.id}</strong></td>
+                    <td>${student.name}</td>
+                    <td>${student.course}</td>
+                    <td>${student.marks}/100</td>
+                    <td class="${gradeClass}">Grade ${getGrade(student.marks)}</td>
+                    <td>
+                        <button onclick="editStudent(${student.id})" class="btn-edit">✏️ Edit</button>
+                        <button onclick="deleteStudent(${student.id})" class="btn-danger">🗑️ Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function getGrade(marks) {
+            if (marks >= 80) return 'A';
+            if (marks >= 70) return 'B';
+            if (marks >= 60) return 'C';
+            return 'D';
+        }
+
+        // CREATE/UPDATE - Save Student
+        async function saveStudent() {
+            const id = parseInt(document.getElementById('editId').value);
+            const name = document.getElementById('studentName').value.trim();
+            const course = document.getElementById('studentCourse').value.trim();
+            const marks = parseInt(document.getElementById('studentMarks').value);
+
+            const validationError = validateStudent(name, course, marks);
+            if (validationError) {
+                showMessage(validationError, 'error');
+                return;
+            }
+
+            try {
+                const data = getStoredData();
+                
+                if (id) {
+                    // UPDATE
+                    const student = data.students.find(s => s.id === id);
+                    if (student) {
+                        student.name = name;
+                        student.course = course;
+                        student.marks = marks;
+                        showMessage(`✅ Student "${name}" updated!`, 'success');
+                    }
+                } else {
+                    // CREATE - Generate new ID
+                    const newId = Math.max(...data.students.map(s => s.id), 0) + 1;
+                    data.students.push({ id: newId, name, course, marks });
+                    showMessage(`✅ Student "${name}" added! (ID: ${newId})`, 'success');
+                }
+
+                saveData(data);
+                clearForm();
+                loadStudents(); // Refresh table
+
+            } catch (error) {
+                showMessage('Error saving student: ' + error.message, 'error');
+            }
+        }
+
+        // EDIT - Populate form
+        function editStudent(id) {
+            const data = getStoredData();
+            const student = data.students.find(s => s.id === id);
+            
+            if (student) {
+                document.getElementById('editId').value = student.id;
+                document.getElementById('studentName').value = student.name;
+                document.getElementById('studentCourse').value = student.course;
+                document.getElementById('studentMarks').value = student.marks;
+                
+                document.getElementById('formTitle').textContent = '✏️ Edit Student';
+                document.getElementById('saveBtn').textContent = '💾 Update Student';
+                
+                // Visual feedback
+                document.querySelectorAll('input').forEach(input => input.classList.add('editing'));
+                document.querySelector('.form-section').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // DELETE
+        function deleteStudent(id) {
+            if (!confirm(`Delete student #${id}?`)) return;
+            
+            try {
+                const data = getStoredData();
+                data.students = data.students.filter(s => s.id !== id);
+                saveData(data);
+                showMessage('✅ Student deleted!', 'success');
+                loadStudents();
+            } catch (error) {
+                showMessage('Error deleting student', 'error');
+            }
+        }
+
+        // Initialize
+        window.onload = loadStudents;
+    </script>
+</body>
+</html>
