@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Student Object Example</title>
+</head>
+<body>
+
+    <h2>Student Details</h2>
+
+    <label>ID:</label><br>
+    <input type="number" id="id"><br><br>
+
+    <label>Name:</label><br>
+    <input type="text" id="name"><br><br>
+
+    <label>Department:</label><br>
+    <input type="text" id="dept"><br><br>
+
+    <label>Marks:</label><br>
+    <input type="number" id="marks"><br><br>
+
+    <button onclick="processData()">Submit</button>
+
+    <h3 id="output"></h3>
+
+    <script>
+        function processData() {
+            // Taking input
+            let id = Number(document.getElementById("id").value);
+            let name = document.getElementById("name").value;
+            let department = document.getElementById("dept").value;
+            let marks = Number(document.getElementById("marks").value);
+
+            // Creating student object
+            const student = { id, name, department, marks };
+
+            // Object destructuring
+            const { id: sid, name: sname, department: sdept, marks: smarks } = student;
+
+            // Grade calculation (arrow function)
+            const getGrade = (marks) => {
+                if (marks >= 90) return "A";
+                else if (marks >= 75) return "B";
+                else if (marks >= 50) return "C";
+                else return "F";
+            };
+
+            // Creating updated object using spread operator
+            const updatedStudent = {
+                ...student,
+                grade: getGrade(smarks)
+            };
+
+            // Display output using template literals
+            document.getElementById("output").innerText = `
+ID: ${sid}
+Name: ${sname}
+Department: ${sdept}
+Marks: ${smarks}
+
+Updated Object:
+${JSON.stringify(updatedStudent)}
+            `;
+        }
+    </script>
+
+</body>
+</html>
