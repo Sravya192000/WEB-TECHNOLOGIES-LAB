@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Multi-Stage Form with Multiple Inputs</title>
+<style>
+body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 30px; }
+.container { max-width: 600px; margin: auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+h2 { text-align: center; margin-bottom: 20px; }
+.stage { display: none; }
+input, select { width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ccc; }
+button { padding: 10px 15px; border: none; border-radius: 6px; background: #060606; color: white; cursor: pointer; margin: 5px 0; }
+button:disabled { background: #aaa; cursor: not-allowed; }
+.progress-bar { height: 20px; background: #e0e0e0; border-radius: 10px; overflow: hidden; margin-bottom: 20px; }
+.progress { height: 100%; width: 0%; background: #4caf50; text-align: center; color: white; line-height: 20px; }
+.error { color: red; font-size: 13px; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+<h2>Multi-Stage Form with Multiple Inputs</h2>
+
+<div class="progress-bar">
+    <div class="progress" id="progressBar">0%</div>
+</div>
+
+<form id="multiForm">
+
+    <!-- Stage 1: Personal Info -->
+    <div class="stage" id="stage1">
+        <label>Full Name:</label>
+        <input type="text" id="name">
+        <div class="error" id="error1_name"></div>
+
+        <label>Age:</label>
+        <input type="number" id="age">
+        <div class="error" id="error1_age"></div>
+
+        <label>Gender:</label>
+        <select id="gender">
+            <option value="">Select Gender</option>
+            <option>Male</option>
+            <option>Female</option>
+            <option>Other</option>
+        </select>
+        <div class="error" id="error1_gender"></div>
+
+        <button type="button" onclick="nextStage()">Next</button>
+    </div>
+
+    <!-- Stage 2: Contact Info -->
+    <div class="stage" id="stage2">
+        <label>Email:</label>
+        <input type="email" id="email">
+        <div class="error" id="error2_email"></div>
+
+        <label>Phone:</label>
+        <input type="text" id="phone">
+        <div class="error" id="error2_phone"></div>
+
+        <button type="button" onclick="prevStage()">Previous</button>
+        <button type="button" onclick="nextStage()">Next</button>
+    </div>
+
+    <!-- Stage 3: Account Setup -->
+    <div class="stage" id="stage3">
+        <label>Username:</label>
+        <input type="text" id="username">
+        <div class="error" id="error3_username"></div>
+
+        <label>Password:</label>
+        <input type="password" id="password">
+        <div class="error" id="error3_password"></div>
+
+        <label>Confirm Password:</label>
+        <input type="password" id="confirm">
+        <div class="error" id="error3_confirm"></div>
+
+        <button type="button" onclick="prevStage()">Previous</button>
+        <button type="button" onclick="nextStage()">Next</button>
+    </div>
+
+    <!-- Stage 4: Preferences -->
+    <div class="stage" id="stage4">
+        <label>Preferred Contact Method:</label>
+        <input type="radio" name="contactMethod" value="Email"> Email
+        <input type="radio" name="contactMethod" value="Phone"> Phone
+        <div class="error" id="error4_contact"></div>
+
+        <label>Subscribe to Newsletter?</label>
+        <input type="checkbox" id="newsletter"> Yes
+
+        <label>Country:</label>
+        <select id="country">
+            <option value="">Select Country</option>
+            <option>USA</option>
+            <option>UK</option>
+            <option>India</option>
+            <option>Other</option>
+        </select>
+        <div class="error" id="error4_country"></div>
+
+        <button type="button" onclick="prevStage()">Previous</button>
+        <button type="button" onclick="submitForm()">Submit</button>
+    </div>
+
+</form>
+</div>
+
+<script>
+let currentStage = 0;
+const stages = document.querySelectorAll(".stage");
+const progressBar = document.getElementById("progressBar");
+
+// Temporary storage
+let formData = {};
+
+// Show initial stage
+showStage(currentStage);
+
+function showStage(index) {
+    stages.forEach((s,i)=>s.style.display = i===index?"block":"none");
+    updateProgress();
+}
+
+function updateProgress() {
+    const percent = ((currentStage +1)/stages.length)*100;
+    progressBar.style.width = percent + "%";
+    progressBar.textContent = Math.round(percent) + "%";
+}
+
+function nextStage() {
+    if(validateStage(currentStage)){
+        currentStage++;
+        showStage(currentStage);
+    }
+}
+
+function prevStage() {
+    currentStage--;
+    if(currentStage<0) currentStage=0;
+    showStage(currentStage);
+}
+
+// Validation per stage
+function validateStage(stage){
+    let valid = true;
+
+    // Stage 1: Personal Info
+    if(stage===0){
+        const name=document.getElementById("name").value.trim();
+        const age=document.getElementById("age").value;
+        const gender=document.getElementById("gender").value;
+
+        if(name===""){document.getElementById("error1_name").textContent="Name required"; valid=false;} else{document.getElementById("error1_name").textContent=""; formData.name=name;}
+        if(age==="" || age<=0){document.getElementById("error1_age").textContent="Valid age required"; valid=false;} else{document.getElementById("error1_age").textContent=""; formData.age=age;}
+        if(gender===""){document.getElementById("error1_gender").textContent="Select gender"; valid=false;} else{document.getElementById("error1_gender").textContent=""; formData.gender=gender;}
+    }
+
+    // Stage 2: Contact Info
+    if(stage===1){
+        const email=document.getElementById("email").value.trim();
+        const phone=document.getElementById("phone").value.trim();
+        const emailPattern=/^[^ ]+@[^ ]+\.[a-z]{2,3}$/;
+        if(!emailPattern.test(email)){document.getElementById("error2_email").textContent="Valid email required"; valid=false;} else{document.getElementById("error2_email").textContent=""; formData.email=email;}
+        if(phone.length<10){document.getElementById("error2_phone").textContent="Valid phone required"; valid=false;} else{document.getElementById("error2_phone").textContent=""; formData.phone=phone;}
+    }
+
+    // Stage 3: Account Setup
+    if(stage===2){
+        const username=document.getElementById("username").value.trim();
+        const password=document.getElementById("password").value;
+        const confirm=document.getElementById("confirm").value;
+        if(username===""){document.getElementById("error3_username").textContent="Username required"; valid=false;} else{document.getElementById("error3_username").textContent=""; formData.username=username;}
+        if(password.length<6){document.getElementById("error3_password").textContent="Password 6+ chars"; valid=false;} else{document.getElementById("error3_password").textContent=""; formData.password=password;}
+        if(confirm!==password){document.getElementById("error3_confirm").textContent="Passwords must match"; valid=false;} else{document.getElementById("error3_confirm").textContent=""; formData.confirm=confirm;}
+    }
+
+    // Stage 4: Preferences
+    if(stage===3){
+        const contactMethod=document.querySelector('input[name="contactMethod"]:checked');
+        const country=document.getElementById("country").value;
+        if(!contactMethod){document.getElementById("error4_contact").textContent="Select contact method"; valid=false;} else{document.getElementById("error4_contact").textContent=""; formData.contactMethod=contactMethod.value;}
+        if(country===""){document.getElementById("error4_country").textContent="Select country"; valid=false;} else{document.getElementById("error4_country").textContent=""; formData.country=country;}
+        formData.newsletter=document.getElementById("newsletter").checked;
+    }
+
+    return valid;
+}
+
+// Submit
+function submitForm(){
+    if(validateStage(currentStage)){
+        alert("Form submitted successfully!\n" + JSON.stringify(formData, null, 2));
+    }
+}
+</script>
+
+</body>
+</html>
