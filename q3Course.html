@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Course Enrollment System</title>
+</head>
+<body>
+
+    <h2>Course Enrollment</h2>
+
+    <label>Course Name:</label><br>
+    <input type="text" id="courseName"><br><br>
+
+    <label>Instructor Name:</label><br>
+    <input type="text" id="instructor"><br><br>
+
+    <label>Seats Available (true/false):</label><br>
+    <input type="text" id="seats"><br><br>
+
+    <button onclick="enroll()">Enroll</button>
+
+    <h3 id="output"></h3>
+
+    <script>
+        // ES6 Class
+        class Course {
+            constructor(courseName, instructor) {
+                this.courseName = courseName;
+                this.instructor = instructor;
+            }
+
+            displayCourse() {
+                return `Course: ${this.courseName}, Instructor: ${this.instructor}`;
+            }
+        }
+
+        function enroll() {
+            // Taking input
+            let courseName = document.getElementById("courseName").value;
+            let instructor = document.getElementById("instructor").value;
+            let seatsInput = document.getElementById("seats").value;
+
+            // Convert input to boolean
+            let seatsAvailable = (seatsInput.toLowerCase() === "true");
+
+            // Create object
+            let course1 = new Course(courseName, instructor);
+
+            // Promise for enrollment
+            let enrollCourse = new Promise((resolve, reject) => {
+                if (seatsAvailable)
+                    resolve("Enrollment Successful");
+                else
+                    reject("Course Full");
+            });
+
+            // Display result
+            enrollCourse
+                .then(msg => {
+                    document.getElementById("output").innerText = 
+                        `${course1.displayCourse()}\n${msg}`;
+                })
+                .catch(err => {
+                    document.getElementById("output").innerText = 
+                        `${course1.displayCourse()}\n${err}`;
+                });
+        }
+    </script>
+
+</body>
+</html>
